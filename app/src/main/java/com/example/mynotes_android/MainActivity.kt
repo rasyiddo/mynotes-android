@@ -24,6 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mynotes_android.ui.theme.MynotesandroidTheme
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
 
@@ -41,30 +44,49 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyNotesApp() {
 
-    Scaffold(
-        topBar = {
-            MyNotesTopBar()
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    // Nanti digunakan untuk membuat catatan
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "home"
+    ) {
+
+        composable("home") {
+
+            Scaffold(
+                topBar = {
+                    MyNotesTopBar()
+                },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = {
+                            navController.navigate("new_note")
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Tambah catatan"
+                        )
+                    }
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Tambah catatan"
+            ) { innerPadding ->
+
+                EmptyNotesScreen(
+                    modifier = Modifier.padding(innerPadding)
                 )
             }
         }
-    ) { innerPadding ->
 
-        EmptyNotesScreen(
-            modifier = Modifier.padding(innerPadding)
-        )
+        composable("new_note") {
+
+            NoteEditorScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
     }
 }
-
 @Composable
 fun MyNotesTopBar() {
 
