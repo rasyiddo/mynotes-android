@@ -27,6 +27,10 @@ import com.example.mynotes_android.ui.theme.MynotesandroidTheme
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
 
@@ -45,6 +49,10 @@ class MainActivity : ComponentActivity() {
 fun MyNotesApp() {
 
     val navController = rememberNavController()
+
+    var notes by remember {
+        mutableStateOf(listOf<Note>())
+    }
 
     NavHost(
         navController = navController,
@@ -71,7 +79,8 @@ fun MyNotesApp() {
                 }
             ) { innerPadding ->
 
-                EmptyNotesScreen(
+                NotesList(
+                    notes = notes,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -81,6 +90,15 @@ fun MyNotesApp() {
 
             NoteEditorScreen(
                 onBackClick = {
+                    navController.popBackStack()
+                },
+                onSaveClick = { title, content ->
+
+                    notes = notes + Note(
+                        title = title,
+                        content = content
+                    )
+
                     navController.popBackStack()
                 }
             )
@@ -141,5 +159,63 @@ fun EmptyNotesScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+fun NotesList(
+    notes: List<Note>,
+    modifier: Modifier = Modifier
+) {
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        if (notes.isEmpty()) {
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+
+                Text(
+                    text = "Belum ada catatan",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Text(
+                    text = "Tekan tombol + untuk membuat catatan",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+        } else {
+
+            notes.forEach { note ->
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+
+                    Text(
+                        text = note.title,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    Text(
+                        text = note.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

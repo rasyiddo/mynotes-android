@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun NoteEditorScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onSaveClick: (String, String) -> Unit
 ) {
 
     var title by remember {
@@ -63,6 +64,7 @@ fun NoteEditorScreen(
 
             TextButton(
                 onClick = {
+                    onSaveClick(title, content)
                     // Nanti digunakan untuk menyimpan
                 }
             ) {
