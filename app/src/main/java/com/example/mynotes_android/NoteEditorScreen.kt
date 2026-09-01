@@ -24,16 +24,18 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun NoteEditorScreen(
+    initialTitle: String = "",
+    initialContent: String = "",
     onBackClick: () -> Unit,
     onSaveClick: (String, String) -> Unit
 ) {
 
     var title by remember {
-        mutableStateOf("")
+        mutableStateOf(initialTitle)
     }
 
     var content by remember {
-        mutableStateOf("")
+        mutableStateOf(initialContent)
     }
 
     Column(

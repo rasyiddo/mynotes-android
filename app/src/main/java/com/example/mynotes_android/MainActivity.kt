@@ -3,6 +3,7 @@ package com.example.mynotes_android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,18 +20,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.mynotes_android.ui.theme.MynotesandroidTheme
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.mynotes_android.ui.theme.MynotesandroidTheme
+
 
 class MainActivity : ComponentActivity() {
 
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
 fun MyNotesApp() {
 
@@ -54,47 +57,75 @@ fun MyNotesApp() {
         mutableStateOf(listOf<Note>())
     }
 
+    var selectedNote by remember {
+        mutableStateOf<Note?>(null)
+    }
+
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
 
+        // =========================
+        // HOME
+        // =========================
+
         composable("home") {
 
             Scaffold(
+
                 topBar = {
                     MyNotesTopBar()
                 },
+
                 floatingActionButton = {
+
                     FloatingActionButton(
                         onClick = {
                             navController.navigate("new_note")
                         }
                     ) {
+
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Tambah catatan"
                         )
                     }
                 }
+
             ) { innerPadding ->
 
                 NotesList(
                     notes = notes,
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier.padding(innerPadding),
+
+                    onNoteClick = { note ->
+
+                        selectedNote = note
+
+                        navController.navigate("edit_note")
+                    }
                 )
             }
         }
 
+
+        // =========================
+        // NEW NOTE
+        // =========================
+
         composable("new_note") {
 
             NoteEditorScreen(
+
                 onBackClick = {
                     navController.popBackStack()
                 },
+
                 onSaveClick = { title, content ->
 
                     notes = notes + Note(
+                        id = notes.size + 1,
                         title = title,
                         content = content
                     )
@@ -103,19 +134,66 @@ fun MyNotesApp() {
                 }
             )
         }
+
+
+        // =========================
+        // EDIT NOTE
+        // =========================
+
+        composable("edit_note") {
+
+            selectedNote?.let { note ->
+
+                NoteEditorScreen(
+
+                    initialTitle = note.title,
+
+                    initialContent = note.content,
+
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+
+                    onSaveClick = { title, content ->
+
+                        notes = notes.map {
+
+                            if (it.id == note.id) {
+
+                                it.copy(
+                                    title = title,
+                                    content = content
+                                )
+
+                            } else {
+
+                                it
+                            }
+                        }
+
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
     }
 }
+
+
 @Composable
 fun MyNotesTopBar() {
 
     Row(
+
         modifier = Modifier
             .fillMaxWidth()
             .padding(
                 horizontal = 16.dp,
                 vertical = 12.dp
             ),
+
         verticalAlignment = Alignment.CenterVertically,
+
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
 
@@ -130,6 +208,7 @@ fun MyNotesTopBar() {
                 // Nanti digunakan untuk menu
             }
         ) {
+
             Icon(
                 imageVector = Icons.Default.Menu,
                 contentDescription = "Menu"
@@ -138,37 +217,16 @@ fun MyNotesTopBar() {
     }
 }
 
-@Composable
-fun EmptyNotesScreen(
-    modifier: Modifier = Modifier
-) {
-
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-
-        Text(
-            text = "INI MYNOTES!!!",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Text(
-            text = "Tekan tombol + untuk membuat catatan",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
 
 @Composable
 fun NotesList(
     notes: List<Note>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNoteClick: (Note) -> Unit
 ) {
 
     Column(
+
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
@@ -177,8 +235,11 @@ fun NotesList(
         if (notes.isEmpty()) {
 
             Column(
+
                 modifier = Modifier.fillMaxSize(),
+
                 horizontalAlignment = Alignment.CenterHorizontally,
+
                 verticalArrangement = Arrangement.Center
             ) {
 
@@ -199,8 +260,12 @@ fun NotesList(
             notes.forEach { note ->
 
                 Column(
+
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable {
+                            onNoteClick(note)
+                        }
                         .padding(bottom = 12.dp)
                 ) {
 
