@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-
 @Composable
 fun NoteEditorScreen(
     initialTitle: String = "",
@@ -30,31 +29,23 @@ fun NoteEditorScreen(
     onDeleteClick: (() -> Unit)? = null
 ) {
 
-    // Menyimpan isi judul
     var title by remember {
         mutableStateOf(initialTitle)
     }
 
-    // Menyimpan isi catatan
     var content by remember {
         mutableStateOf(initialContent)
     }
 
-    // Menentukan apakah AlertDialog DELETE ditampilkan
     var showDeleteDialog by remember {
         mutableStateOf(false)
     }
-
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-
-        // =========================
-        // JUDUL
-        // =========================
 
         Text(
             text = if (onDeleteClick != null) {
@@ -68,10 +59,9 @@ fun NoteEditorScreen(
             modifier = Modifier.height(16.dp)
         )
 
-
-        // =========================
-        // INPUT JUDUL
-        // =========================
+        // =================================================
+        // JUDUL
+        // =================================================
 
         OutlinedTextField(
             value = title,
@@ -89,15 +79,52 @@ fun NoteEditorScreen(
             singleLine = true
         )
 
-
         Spacer(
             modifier = Modifier.height(16.dp)
         )
 
+        // =================================================
+        // TEXT FORMATTING
+        // =================================================
 
-        // =========================
-        // INPUT ISI CATATAN
-        // =========================
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+
+            Button(
+                onClick = {
+                    content = "**$content**"
+                }
+            ) {
+                Text("B")
+            }
+
+            Button(
+                onClick = {
+                    content = "*$content*"
+                }
+            ) {
+                Text("I")
+            }
+
+            Button(
+                onClick = {
+                    content = "~~$content~~"
+                }
+            ) {
+                Text("S")
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        // =================================================
+        // ISI CATATAN
+        // =================================================
 
         OutlinedTextField(
             value = content,
@@ -115,25 +142,19 @@ fun NoteEditorScreen(
                 .weight(1f)
         )
 
-
         Spacer(
             modifier = Modifier.height(16.dp)
         )
 
-
-        // =========================
-        // TOMBOL
-        // =========================
+        // =================================================
+        // BUTTON SAVE / DELETE
+        // =================================================
 
         Row(
             modifier = Modifier.fillMaxWidth(),
 
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
-            // =========================
-            // TOMBOL DELETE
-            // =========================
 
             if (onDeleteClick != null) {
 
@@ -145,43 +166,25 @@ fun NoteEditorScreen(
                     modifier = Modifier.weight(1f)
                 ) {
 
-                    Text(
-                        text = "DELETE"
-                    )
+                    Text("DELETE")
                 }
             }
 
-
-            // =========================
-            // TOMBOL SAVE
-            // =========================
-
             Button(
                 onClick = {
-                    onSaveClick(
-                        title,
-                        content
-                    )
+                    onSaveClick(title, content)
                 },
 
                 modifier = Modifier.weight(1f)
             ) {
 
-                Text(
-                    text = "SAVE"
-                )
+                Text("SAVE")
             }
         }
-
 
         Spacer(
             modifier = Modifier.height(8.dp)
         )
-
-
-        // =========================
-        // TOMBOL BACK
-        // =========================
 
         Button(
             onClick = {
@@ -191,16 +194,14 @@ fun NoteEditorScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Text(
-                text = "KEMBALI"
-            )
+            Text("KEMBALI")
         }
     }
 
 
-    // =========================
+    // =================================================
     // DELETE CONFIRMATION
-    // =========================
+    // =================================================
 
     if (showDeleteDialog) {
 
@@ -211,14 +212,13 @@ fun NoteEditorScreen(
             },
 
             title = {
-                Text(
-                    text = "Hapus catatan?"
-                )
+                Text("Hapus catatan?")
             },
 
             text = {
                 Text(
-                    text = "Catatan ini akan dihapus. Tindakan ini tidak dapat dibatalkan."
+                    "Catatan ini akan dihapus. " +
+                            "Tindakan ini tidak dapat dibatalkan."
                 )
             },
 
@@ -227,17 +227,13 @@ fun NoteEditorScreen(
                 Button(
                     onClick = {
 
-                        // Tutup dialog
                         showDeleteDialog = false
 
-                        // Jalankan fungsi delete
                         onDeleteClick?.invoke()
                     }
                 ) {
 
-                    Text(
-                        text = "HAPUS"
-                    )
+                    Text("HAPUS")
                 }
             },
 
@@ -249,9 +245,7 @@ fun NoteEditorScreen(
                     }
                 ) {
 
-                    Text(
-                        text = "BATAL"
-                    )
+                    Text("BATAL")
                 }
             }
         )

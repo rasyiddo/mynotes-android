@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,14 +60,50 @@ fun MyNotesApp() {
 
     val navController = rememberNavController()
 
+    // =================================================
+    // DATA NOTES
+    // =================================================
+
     var notes by remember {
         mutableStateOf(listOf<Note>())
     }
+
+    // =================================================
+    // DATA TODO
+    // =================================================
+
+    var todos by remember {
+        mutableStateOf(listOf<Todo>())
+    }
+
+    // =================================================
+    // SELECTED NOTE
+    // =================================================
 
     var selectedNote by remember {
         mutableStateOf<Note?>(null)
     }
 
+    // =================================================
+    // SELECTED TODO
+    // =================================================
+
+    var selectedTodo by remember {
+        mutableStateOf<Todo?>(null)
+    }
+
+    // =================================================
+    // ADD DIALOG
+    // =================================================
+
+    var showAddDialog by remember {
+        mutableStateOf(false)
+    }
+
+
+    // =================================================
+    // NAVIGATION
+    // =================================================
 
     NavHost(
         navController = navController,
@@ -87,28 +126,141 @@ fun MyNotesApp() {
 
                     FloatingActionButton(
                         onClick = {
-                            navController.navigate("new_note")
+                            showAddDialog = true
                         }
                     ) {
 
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah catatan"
+                            contentDescription = "Tambah"
                         )
                     }
                 }
 
             ) { innerPadding ->
 
-                NotesList(
-                    notes = notes,
-                    modifier = Modifier.padding(innerPadding),
+                Column(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                ) {
 
-                    onNoteClick = { note ->
+                    // =================================================
+                    // NOTES
+                    // =================================================
 
-                        selectedNote = note
+                    NotesList(
+                        notes = notes,
 
-                        navController.navigate("edit_note")
+                        modifier = Modifier
+                            .weight(1f),
+
+                        onNoteClick = { note ->
+
+                            selectedNote = note
+
+                            navController.navigate("edit_note")
+                        }
+                    )
+
+
+                    // =================================================
+                    // TODO
+                    // =================================================
+
+                    TodoList(
+                        todos = todos,
+
+                        modifier = Modifier
+                            .weight(1f),
+
+                        onTodoChecked = { todo ->
+
+                            todos = todos.map {
+
+                                if (it.id == todo.id) {
+
+                                    it.copy(
+                                        isCompleted = !it.isCompleted
+                                    )
+
+                                } else {
+
+                                    it
+                                }
+                            }
+                        },
+
+                        onTodoClick = { todo ->
+
+                            selectedTodo = todo
+
+                            navController.navigate("edit_todo")
+                        }
+                    )
+                }
+            }
+        }
+
+
+        // =================================================
+        // NEW TODO
+        // =================================================
+
+        composable("new_todo") {
+
+            TodoEditorScreen(
+
+                onBackClick = {
+                    navController.popBackStack()
+                },
+
+                onSaveClick = { title ->
+
+                    todos = todos + Todo(
+                        id = todos.size + 1,
+                        title = title
+                    )
+
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
+        // =================================================
+        // EDIT TODO
+        // =================================================
+
+        composable("edit_todo") {
+
+            selectedTodo?.let { todo ->
+
+                TodoEditorScreen(
+
+                    initialTitle = todo.title,
+
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+
+                    onSaveClick = { title ->
+
+                        todos = todos.map {
+
+                            if (it.id == todo.id) {
+
+                                it.copy(
+                                    title = title
+                                )
+
+                            } else {
+
+                                it
+                            }
+                        }
+
+                        navController.popBackStack()
                     }
                 )
             }
@@ -191,6 +343,76 @@ fun MyNotesApp() {
             }
         }
     }
+
+
+    // =================================================
+    // ADD DIALOG
+    // =================================================
+
+    if (showAddDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showAddDialog = false
+            },
+
+            title = {
+                Text("Apa yang ingin dibuat?")
+            },
+
+            text = {
+
+                Column {
+
+                    // NOTE
+
+                    TextButton(
+                        onClick = {
+
+                            showAddDialog = false
+
+                            navController.navigate("new_note")
+                        },
+
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+
+                        Text("📝 Note")
+                    }
+
+
+                    // TODO
+
+                    TextButton(
+                        onClick = {
+
+                            showAddDialog = false
+
+                            navController.navigate("new_todo")
+                        },
+
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+
+                        Text("☑ Todo")
+                    }
+                }
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+                        showAddDialog = false
+                    }
+                ) {
+
+                    Text("BATAL")
+                }
+            }
+        )
+    }
 }
 
 
@@ -213,6 +435,7 @@ fun MyNotesTopBar() {
         verticalAlignment = Alignment.CenterVertically,
 
         horizontalArrangement = Arrangement.SpaceBetween
+
     ) {
 
         Text(
@@ -246,22 +469,22 @@ fun NotesList(
     modifier: Modifier = Modifier,
     onNoteClick: (Note) -> Unit
 ) {
-
     Column(
-
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
 
+        Text(
+            text = "Notes",
+            style = MaterialTheme.typography.titleLarge
+        )
+
         if (notes.isEmpty()) {
 
             Column(
-
                 modifier = Modifier.fillMaxSize(),
-
                 horizontalAlignment = Alignment.CenterHorizontally,
-
                 verticalArrangement = Arrangement.Center
             ) {
 
@@ -282,24 +505,107 @@ fun NotesList(
             notes.forEach { note ->
 
                 Column(
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
                             onNoteClick(note)
                         }
-                        .padding(bottom = 12.dp)
+                        .padding(vertical = 8.dp)
                 ) {
 
                     Text(
                         text = note.title,
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    FormattedText(
+                        text = note.content
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// =====================================================
+// TODO LIST
+// =====================================================
+
+@Composable
+fun TodoList(
+    todos: List<Todo>,
+    modifier: Modifier = Modifier,
+    onTodoChecked: (Todo) -> Unit,
+    onTodoClick: (Todo) -> Unit
+) {
+
+    Column(
+
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+
+    ) {
+
+        Text(
+            text = "Todo",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        if (todos.isEmpty()) {
+
+            Column(
+
+                modifier = Modifier.fillMaxSize(),
+
+                horizontalAlignment = Alignment.CenterHorizontally,
+
+                verticalArrangement = Arrangement.Center
+
+            ) {
+
+                Text(
+                    text = "Belum ada Todo",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Text(
+                    text = "Belum ada tugas yang dibuat",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+        } else {
+
+            todos.forEach { todo ->
+
+                Row(
+
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onTodoClick(todo)
+                        }
+                        .padding(vertical = 8.dp),
+
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+
+                    Checkbox(
+
+                        checked = todo.isCompleted,
+
+                        onCheckedChange = {
+                            onTodoChecked(todo)
+                        }
                     )
 
                     Text(
-                        text = note.content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = todo.title,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 }
             }
