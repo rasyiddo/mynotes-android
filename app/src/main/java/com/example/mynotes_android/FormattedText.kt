@@ -33,7 +33,7 @@ fun parseFormattedText(
 
         pattern.findAll(text).forEach { match ->
 
-            // Teks biasa sebelum teks yang diformat
+            // Teks biasa sebelum format
             append(
                 text.substring(
                     lastIndex,
@@ -42,7 +42,11 @@ fun parseFormattedText(
             )
 
             when {
+
+                // =========================
                 // BOLD
+                // =========================
+
                 match.value.startsWith("**") -> {
 
                     withStyle(
@@ -50,39 +54,54 @@ fun parseFormattedText(
                             fontWeight = FontWeight.Bold
                         )
                     ) {
-                        append(match.groupValues[2])
+                        append(
+                            match.groupValues[2]
+                        )
                     }
                 }
 
+                // =========================
                 // STRIKETHROUGH
+                // =========================
+
                 match.value.startsWith("~~") -> {
 
                     withStyle(
                         SpanStyle(
-                            textDecoration = TextDecoration.LineThrough
+                            textDecoration =
+                                TextDecoration.LineThrough
                         )
                     ) {
-                        append(match.groupValues[4])
+                        append(
+                            match.groupValues[4]
+                        )
                     }
                 }
 
+                // =========================
                 // ITALIC
+                // =========================
+
                 match.value.startsWith("*") -> {
 
                     withStyle(
                         SpanStyle(
-                            fontStyle = FontStyle.Italic
+                            fontStyle =
+                                FontStyle.Italic
                         )
                     ) {
-                        append(match.groupValues[6])
+                        append(
+                            match.groupValues[6]
+                        )
                     }
                 }
             }
 
-            lastIndex = match.range.last + 1
+            lastIndex =
+                match.range.last + 1
         }
 
-        // Menambahkan sisa teks
+        // Sisa teks
         append(
             text.substring(lastIndex)
         )
