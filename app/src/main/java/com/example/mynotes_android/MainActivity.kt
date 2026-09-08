@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +41,7 @@ import com.example.mynotes_android.data.AppDatabase
 import com.example.mynotes_android.data.NoteEntity
 import com.example.mynotes_android.data.TodoEntity
 import com.example.mynotes_android.ui.theme.MynotesandroidTheme
+import com.example.mynotes_android.ui.theme.ThemeOption
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -69,8 +72,11 @@ fun MyNotesApp(
 
     val navController = rememberNavController()
 
-    // Coroutine scope untuk operasi Room
     val scope = rememberCoroutineScope()
+
+    // ==========================================
+    // STATE DATA
+    // ==========================================
 
     var notes by remember {
         mutableStateOf(listOf<Note>())
@@ -90,6 +96,22 @@ fun MyNotesApp(
 
     var showAddDialog by remember {
         mutableStateOf(false)
+    }
+
+    // ==========================================
+    // SEARCH
+    // ==========================================
+
+    var searchText by remember {
+        mutableStateOf("")
+    }
+
+    // ==========================================
+    // THEME
+    // ==========================================
+
+    var selectedTheme by remember {
+        mutableStateOf(ThemeOption.WHITE)
     }
 
 
@@ -125,104 +147,258 @@ fun MyNotesApp(
     }
 
 
-    NavHost(
-        navController = navController,
-        startDestination = "home"
+    // ==========================================
+    // FILTER SEARCH
+    // ==========================================
+
+    val filteredNotes = notes.filter { note ->
+
+        searchText.isBlank() ||
+                note.title.contains(
+                    searchText,
+                    ignoreCase = true
+                ) ||
+                note.content.contains(
+                    searchText,
+                    ignoreCase = true
+                )
+    }
+
+
+    val filteredTodos = todos.filter { todo ->
+
+        searchText.isBlank() ||
+                todo.title.contains(
+                    searchText,
+                    ignoreCase = true
+                )
+    }
+
+
+    // ==========================================
+    // THEME WRAPPER
+    // ==========================================
+
+    MynotesandroidTheme(
+        themeOption = selectedTheme
     ) {
 
-        // ==========================================
-        // HOME
-        // ==========================================
+        NavHost(
+            navController = navController,
+            startDestination = "home"
+        ) {
 
-        composable("home") {
+            // ==========================================
+            // HOME
+            // ==========================================
 
-            Scaffold(
+            composable("home") {
 
-                topBar = {
-                    MyNotesTopBar()
-                },
+                Scaffold(
 
-                floatingActionButton = {
+                    topBar = {
+                        MyNotesTopBar()
+                    },
 
-                    FloatingActionButton(
-                        onClick = {
-                            showAddDialog = true
+                    floatingActionButton = {
+
+                        FloatingActionButton(
+                            onClick = {
+                                showAddDialog = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Tambah"
+                            )
                         }
+                    }
+
+                ) { paddingValues ->
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah"
+
+                        // ==========================================
+                        // SEARCH BAR
+                        // ==========================================
+
+                        OutlinedTextField(
+                            value = searchText,
+                            onValueChange = {
+                                searchText = it
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 16.dp,
+                                    vertical = 8.dp
+                                ),
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search"
+                                )
+                            },
+                            placeholder = {
+                                Text("Cari note atau todo...")
+                            }
                         )
+
+
+                        // ==========================================
+                        // THEME PICKER
+                        // ==========================================
+
+                        ThemePicker(
+                            selectedTheme = selectedTheme,
+                            onThemeSelected = {
+                                selectedTheme = it
+                            }
+                        )
+
+
+                        // ==========================================
+                        // NOTE + TODO
+                        // ==========================================
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+
+                            NotesList(
+                                notes = filteredNotes,
+                                modifier = Modifier.weight(1f),
+                                onNoteClick = { note ->
+
+                                    selectedNote = note
+
+                                    navController.navigate(
+                                        "edit_note"
+                                    )
+                                }
+                            )
+
+
+                            TodoList(
+                                todos = filteredTodos,
+                                modifier = Modifier.weight(1f),
+
+                                onTodoChecked = { todo ->
+
+                                    val updatedTodo =
+                                        todo.copy(
+                                            isCompleted =
+                                                !todo.isCompleted
+                                        )
+
+                                    todos = todos.map {
+
+                                        if (it.id == todo.id) {
+                                            updatedTodo
+                                        } else {
+                                            it
+                                        }
+                                    }
+
+                                    scope.launch {
+
+                                        database
+                                            .todoDao()
+                                            .updateTodo(
+                                                TodoEntity(
+                                                    id = updatedTodo.id,
+                                                    title = updatedTodo.title,
+                                                    isCompleted =
+                                                        updatedTodo.isCompleted
+                                                )
+                                            )
+                                    }
+                                },
+
+                                onTodoClick = { todo ->
+
+                                    selectedTodo = todo
+
+                                    navController.navigate(
+                                        "edit_todo"
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
 
-            ) { paddingValues ->
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
+                // ==========================================
+                // ADD DIALOG
+                // ==========================================
 
-                    NotesList(
-                        notes = notes,
-                        modifier = Modifier.weight(1f),
-                        onNoteClick = { note ->
+                if (showAddDialog) {
 
-                            selectedNote = note
+                    AlertDialog(
 
-                            navController.navigate(
-                                "edit_note"
-                            )
-                        }
-                    )
+                        onDismissRequest = {
+                            showAddDialog = false
+                        },
 
+                        title = {
+                            Text("Apa yang ingin dibuat?")
+                        },
 
-                    TodoList(
-                        todos = todos,
-                        modifier = Modifier.weight(1f),
+                        text = {
 
-                        onTodoChecked = { todo ->
+                            Column {
 
-                            val updatedTodo =
-                                todo.copy(
-                                    isCompleted =
-                                        !todo.isCompleted
-                                )
+                                TextButton(
+                                    onClick = {
 
-                            todos = todos.map {
+                                        showAddDialog = false
 
-                                if (it.id == todo.id) {
-                                    updatedTodo
-                                } else {
-                                    it
-                                }
-                            }
-
-                            // Simpan perubahan ke Room
-                            scope.launch {
-
-                                database
-                                    .todoDao()
-                                    .updateTodo(
-                                        TodoEntity(
-                                            id = updatedTodo.id,
-                                            title = updatedTodo.title,
-                                            isCompleted =
-                                                updatedTodo.isCompleted
+                                        navController.navigate(
+                                            "new_note"
                                         )
-                                    )
+                                    },
+
+                                    modifier = Modifier.fillMaxWidth()
+
+                                ) {
+                                    Text("📝 Note")
+                                }
+
+
+                                TextButton(
+                                    onClick = {
+
+                                        showAddDialog = false
+
+                                        navController.navigate(
+                                            "new_todo"
+                                        )
+                                    },
+
+                                    modifier = Modifier.fillMaxWidth()
+
+                                ) {
+                                    Text("☑ Todo")
+                                }
                             }
                         },
 
+                        confirmButton = {
 
-                        onTodoClick = { todo ->
-
-                            selectedTodo = todo
-
-                            navController.navigate(
-                                "edit_todo"
-                            )
+                            TextButton(
+                                onClick = {
+                                    showAddDialog = false
+                                }
+                            ) {
+                                Text("BATAL")
+                            }
                         }
                     )
                 }
@@ -230,194 +406,30 @@ fun MyNotesApp(
 
 
             // ==========================================
-            // ADD DIALOG
+            // NEW NOTE
             // ==========================================
 
-            if (showAddDialog) {
-
-                AlertDialog(
-
-                    onDismissRequest = {
-                        showAddDialog = false
-                    },
-
-                    title = {
-                        Text("Apa yang ingin dibuat?")
-                    },
-
-                    text = {
-
-                        Column {
-
-                            TextButton(
-                                onClick = {
-
-                                    showAddDialog = false
-
-                                    navController.navigate(
-                                        "new_note"
-                                    )
-                                },
-
-                                modifier = Modifier.fillMaxWidth()
-
-                            ) {
-                                Text("📝 Note")
-                            }
-
-
-                            TextButton(
-                                onClick = {
-
-                                    showAddDialog = false
-
-                                    navController.navigate(
-                                        "new_todo"
-                                    )
-                                },
-
-                                modifier = Modifier.fillMaxWidth()
-
-                            ) {
-                                Text("☑ Todo")
-                            }
-                        }
-                    },
-
-                    confirmButton = {
-
-                        TextButton(
-                            onClick = {
-                                showAddDialog = false
-                            }
-                        ) {
-                            Text("BATAL")
-                        }
-                    }
-                )
-            }
-        }
-
-
-        // ==========================================
-        // NEW NOTE
-        // ==========================================
-
-        composable("new_note") {
-
-            NoteEditorScreen(
-
-                onBackClick = {
-                    navController.popBackStack()
-                },
-
-
-                onSaveClick = { title, content ->
-
-                    scope.launch {
-
-                        // Simpan note ke Room
-                        database
-                            .noteDao()
-                            .insertNote(
-                                NoteEntity(
-                                    title = title,
-                                    content = content
-                                )
-                            )
-
-
-                        // Reload data dari Room
-                        notes = database
-                            .noteDao()
-                            .getAllNotes()
-                            .first()
-                            .map {
-                                Note(
-                                    id = it.id,
-                                    title = it.title,
-                                    content = it.content
-                                )
-                            }
-                    }
-
-                    navController.popBackStack()
-                }
-            )
-        }
-
-
-        // ==========================================
-        // EDIT NOTE
-        // ==========================================
-
-        composable("edit_note") {
-
-            selectedNote?.let { note ->
+            composable("new_note") {
 
                 NoteEditorScreen(
-
-                    initialTitle = note.title,
-
-                    initialContent = note.content,
-
 
                     onBackClick = {
                         navController.popBackStack()
                     },
-
 
                     onSaveClick = { title, content ->
 
                         scope.launch {
 
-                            // Update note di Room
                             database
                                 .noteDao()
-                                .updateNote(
+                                .insertNote(
                                     NoteEntity(
-                                        id = note.id,
                                         title = title,
                                         content = content
                                     )
                                 )
 
-
-                            // Reload data
-                            notes = database
-                                .noteDao()
-                                .getAllNotes()
-                                .first()
-                                .map {
-                                    Note(
-                                        id = it.id,
-                                        title = it.title,
-                                        content = it.content
-                                    )
-                                }
-                        }
-
-                        navController.popBackStack()
-                    },
-
-
-                    onDeleteClick = {
-
-                        scope.launch {
-
-                            // Hapus note dari Room
-                            database
-                                .noteDao()
-                                .deleteNote(
-                                    NoteEntity(
-                                        id = note.id,
-                                        title = note.title,
-                                        content = note.content
-                                    )
-                                )
-
-
-                            // Reload data
                             notes = database
                                 .noteDao()
                                 .getAllNotes()
@@ -435,93 +447,114 @@ fun MyNotesApp(
                     }
                 )
             }
-        }
 
 
-        // ==========================================
-        // NEW TODO
-        // ==========================================
+            // ==========================================
+            // EDIT NOTE
+            // ==========================================
 
-        composable("new_todo") {
+            composable("edit_note") {
 
-            TodoEditorScreen(
+                selectedNote?.let { note ->
 
-                onBackClick = {
-                    navController.popBackStack()
-                },
+                    NoteEditorScreen(
 
+                        initialTitle = note.title,
 
-                onSaveClick = { title ->
+                        initialContent = note.content,
 
-                    scope.launch {
+                        onBackClick = {
+                            navController.popBackStack()
+                        },
 
-                        // Simpan Todo ke Room
-                        database
-                            .todoDao()
-                            .insertTodo(
-                                TodoEntity(
-                                    title = title
-                                )
-                            )
+                        onSaveClick = { title, content ->
 
+                            scope.launch {
 
-                        // Reload data dari Room
-                        todos = database
-                            .todoDao()
-                            .getAllTodos()
-                            .first()
-                            .map {
-                                Todo(
-                                    id = it.id,
-                                    title = it.title,
-                                    isCompleted =
-                                        it.isCompleted
-                                )
+                                database
+                                    .noteDao()
+                                    .updateNote(
+                                        NoteEntity(
+                                            id = note.id,
+                                            title = title,
+                                            content = content
+                                        )
+                                    )
+
+                                notes = database
+                                    .noteDao()
+                                    .getAllNotes()
+                                    .first()
+                                    .map {
+                                        Note(
+                                            id = it.id,
+                                            title = it.title,
+                                            content = it.content
+                                        )
+                                    }
                             }
-                    }
 
-                    navController.popBackStack()
+                            navController.popBackStack()
+                        },
+
+                        onDeleteClick = {
+
+                            scope.launch {
+
+                                database
+                                    .noteDao()
+                                    .deleteNote(
+                                        NoteEntity(
+                                            id = note.id,
+                                            title = note.title,
+                                            content = note.content
+                                        )
+                                    )
+
+                                notes = database
+                                    .noteDao()
+                                    .getAllNotes()
+                                    .first()
+                                    .map {
+                                        Note(
+                                            id = it.id,
+                                            title = it.title,
+                                            content = it.content
+                                        )
+                                    }
+                            }
+
+                            navController.popBackStack()
+                        }
+                    )
                 }
-            )
-        }
+            }
 
 
-        // ==========================================
-        // EDIT TODO
-        // ==========================================
+            // ==========================================
+            // NEW TODO
+            // ==========================================
 
-        composable("edit_todo") {
-
-            selectedTodo?.let { todo ->
+            composable("new_todo") {
 
                 TodoEditorScreen(
-
-                    initialTitle = todo.title,
-
 
                     onBackClick = {
                         navController.popBackStack()
                     },
 
-
                     onSaveClick = { title ->
 
                         scope.launch {
 
-                            // Update Todo di Room
                             database
                                 .todoDao()
-                                .updateTodo(
+                                .insertTodo(
                                     TodoEntity(
-                                        id = todo.id,
-                                        title = title,
-                                        isCompleted =
-                                            todo.isCompleted
+                                        title = title
                                     )
                                 )
 
-
-                            // Reload data
                             todos = database
                                 .todoDao()
                                 .getAllTodos()
@@ -539,6 +572,58 @@ fun MyNotesApp(
                         navController.popBackStack()
                     }
                 )
+            }
+
+
+            // ==========================================
+            // EDIT TODO
+            // ==========================================
+
+            composable("edit_todo") {
+
+                selectedTodo?.let { todo ->
+
+                    TodoEditorScreen(
+
+                        initialTitle = todo.title,
+
+                        onBackClick = {
+                            navController.popBackStack()
+                        },
+
+                        onSaveClick = { title ->
+
+                            scope.launch {
+
+                                database
+                                    .todoDao()
+                                    .updateTodo(
+                                        TodoEntity(
+                                            id = todo.id,
+                                            title = title,
+                                            isCompleted =
+                                                todo.isCompleted
+                                        )
+                                    )
+
+                                todos = database
+                                    .todoDao()
+                                    .getAllTodos()
+                                    .first()
+                                    .map {
+                                        Todo(
+                                            id = it.id,
+                                            title = it.title,
+                                            isCompleted =
+                                                it.isCompleted
+                                        )
+                                    }
+                            }
+
+                            navController.popBackStack()
+                        }
+                    )
+                }
             }
         }
     }
@@ -558,6 +643,155 @@ fun MyNotesTopBar() {
             Text("MyNotes")
         }
     )
+}
+
+
+// =====================================================
+// THEME PICKER
+// =====================================================
+
+@Composable
+fun ThemePicker(
+    selectedTheme: ThemeOption,
+    onThemeSelected: (ThemeOption) -> Unit
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 16.dp,
+                vertical = 4.dp
+            )
+    ) {
+
+        Text(
+            text = "Tema",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = 8.dp,
+                    bottom = 8.dp
+                ),
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween
+        ) {
+
+            ThemeButton(
+                emoji = "🌸",
+                name = "Pink",
+                selected =
+                    selectedTheme == ThemeOption.PINK,
+                onClick = {
+                    onThemeSelected(
+                        ThemeOption.PINK
+                    )
+                }
+            )
+
+
+            ThemeButton(
+                emoji = "🌿",
+                name = "Sage",
+                selected =
+                    selectedTheme == ThemeOption.SAGE,
+                onClick = {
+                    onThemeSelected(
+                        ThemeOption.SAGE
+                    )
+                }
+            )
+
+
+            ThemeButton(
+                emoji = "💜",
+                name = "Ungu",
+                selected =
+                    selectedTheme == ThemeOption.PURPLE,
+                onClick = {
+                    onThemeSelected(
+                        ThemeOption.PURPLE
+                    )
+                }
+            )
+
+
+            ThemeButton(
+                emoji = "🖤",
+                name = "Hitam",
+                selected =
+                    selectedTheme == ThemeOption.BLACK,
+                onClick = {
+                    onThemeSelected(
+                        ThemeOption.BLACK
+                    )
+                }
+            )
+
+
+            ThemeButton(
+                emoji = "🤍",
+                name = "Putih",
+                selected =
+                    selectedTheme == ThemeOption.WHITE,
+                onClick = {
+                    onThemeSelected(
+                        ThemeOption.WHITE
+                    )
+                }
+            )
+        }
+    }
+}
+
+
+// =====================================================
+// THEME BUTTON
+// =====================================================
+
+@Composable
+fun ThemeButton(
+    emoji: String,
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+
+    Column(
+        horizontalAlignment =
+            Alignment.CenterHorizontally,
+
+        modifier = Modifier
+            .clickable {
+                onClick()
+            }
+            .padding(4.dp)
+    ) {
+
+        Text(
+            text = emoji,
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        if (selected) {
+
+            Text(
+                text = "✓",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
 }
 
 
@@ -590,6 +824,7 @@ fun NotesList(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment =
                     Alignment.CenterHorizontally,
+
                 verticalArrangement =
                     Arrangement.Center
             ) {
@@ -603,8 +838,10 @@ fun NotesList(
                 Text(
                     text =
                         "Tekan tombol + untuk membuat catatan",
+
                     style =
                         MaterialTheme.typography.bodyMedium,
+
                     color =
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -668,8 +905,10 @@ fun TodoList(
 
             Column(
                 modifier = Modifier.fillMaxSize(),
+
                 horizontalAlignment =
                     Alignment.CenterHorizontally,
+
                 verticalArrangement =
                     Arrangement.Center
             ) {
@@ -683,8 +922,10 @@ fun TodoList(
                 Text(
                     text =
                         "Tekan tombol + untuk membuat tugas",
+
                     style =
                         MaterialTheme.typography.bodyMedium,
+
                     color =
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
